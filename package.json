@@ -1,0 +1,90 @@
+{
+  "name": "nix-injection",
+  "displayName": "Nix Comment-based Language Injection",
+  "description": "Highlight embedded languages in Nix strings using a comment marker like /* lang */ ''...'' (like in treesitter)",
+  "version": "0.0.1",
+  "publisher": "barsikus007",
+  "author": {
+    "name": "barsikus007",
+    "email": "barsikus07@gmail.com"
+  },
+  "license": "MIT",
+  "icon": "icon.png",
+  "homepage": "https://github.com/barsikus007/vscode-nix-injection#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/barsikus007/vscode-nix-injection.git"
+  },
+  "bugs": {
+    "url": "https://github.com/barsikus007/vscode-nix-injection/issues"
+  },
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "keywords": [
+    "nix",
+    "syntax",
+    "highlighting",
+    "injection",
+    "embedded",
+    "language",
+    "treesitter"
+  ],
+  "scripts": {
+    "generate": "bun scripts/generate.js",
+    "test": "bun test/grammar-test.js"
+  },
+  "devDependencies": {
+    "vscode-textmate": "^9.1.0",
+    "vscode-oniguruma": "^2.0.1"
+  },
+  "contributes": {
+    "grammars": [
+      {
+        "scopeName": "nix.inline-injection",
+        "path": "./syntaxes/nix-inline-injection.tmLanguage.json",
+        "injectTo": [
+          "source.nix"
+        ],
+        "embeddedLanguages": {
+          "meta.embedded.block.shell": "shellscript",
+          "meta.embedded.block.python": "python",
+          "meta.embedded.block.javascript": "javascript",
+          "meta.embedded.block.typescript": "typescript",
+          "meta.embedded.block.json": "json",
+          "meta.embedded.block.yaml": "yaml",
+          "meta.embedded.block.toml": "toml",
+          "meta.embedded.block.html": "html",
+          "meta.embedded.block.css": "css",
+          "meta.embedded.block.scss": "scss",
+          "meta.embedded.block.lua": "lua",
+          "meta.embedded.block.ruby": "ruby",
+          "meta.embedded.block.go": "go",
+          "meta.embedded.block.rust": "rust",
+          "meta.embedded.block.cpp": "cpp",
+          "meta.embedded.block.c": "c",
+          "meta.embedded.block.java": "java",
+          "meta.embedded.block.kotlin": "kotlin",
+          "meta.embedded.block.sql": "sql",
+          "meta.embedded.block.xml": "xml",
+          "meta.embedded.block.markdown": "markdown",
+          "meta.embedded.block.dockerfile": "dockerfile",
+          "meta.embedded.block.nix": "nix",
+          "meta.embedded.block.haskell": "haskell",
+          "meta.embedded.block.php": "php",
+          "meta.embedded.block.perl": "perl",
+          "meta.embedded.block.powershell": "powershell",
+          "meta.embedded.block.fish": "fish",
+          "meta.embedded.block.regex": "regex",
+          "meta.embedded.block.diff": "diff",
+          "meta.embedded.block.makefile": "makefile",
+          "meta.embedded.block.ini": "ini",
+          "meta.embedded.block.kdl": "kdl"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+name: Build Nix Derivation
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Build with Nix
+        run: nix build .#vsix
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: vsix
+          path: result/*

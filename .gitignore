@@ -1,0 +1,5 @@
+node_modules/
+package-lock.json
+*.vsix
+icon.png
+syntaxes/nix-inline-injection.tmLanguage.json

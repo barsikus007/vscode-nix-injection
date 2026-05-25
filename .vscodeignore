@@ -1,0 +1,13 @@
+.git/**
+.gitignore
+.claude/**
+.vscode/**
+node_modules/**
+test/**
+scripts/**
+flake.nix
+flake.lock
+package-lock.json
+test.nix
+*.vsix
+CLAUDE.md

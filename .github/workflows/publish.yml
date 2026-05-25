@@ -1,0 +1,22 @@
+name: Publish Release
+
+on:
+  push:
+    tags: [v*]
+
+jobs:
+  call-build:
+    uses: ./.github/workflows/build.yml
+
+  release:
+    needs: call-build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          path: dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
