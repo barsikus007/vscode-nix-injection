@@ -2,7 +2,7 @@
   "name": "nix-injection",
   "displayName": "Nix Comment-based Language Injection",
   "description": "Highlight embedded languages in Nix strings using a comment marker like /* lang */ ''...'' (like in treesitter)",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "barsikus007",
   "author": {
     "name": "barsikus007",
