@@ -5,13 +5,10 @@
 //
 // languages.json is the single source of truth — it is also read by flake.nix
 // (via builtins.fromJSON). Each entry has:
-//   key       — short id used in repository keys and `meta.embedded.block.<key>`
-//   triggers  — comment markers accepted between `/*` and `*/`
-//   scope     — TextMate scope name of the target grammar (e.g. "source.python")
-//   langId    — VSCode language id used for the embeddedLanguages map
-//   useShellBody — only set true for shell-family languages that need the
-//                  two-frame `\G` + `while` workaround for bash's argument
-//                  matcher leaking past the closing `''` (see #shell-body).
+//   key      — short id used in repository keys and `meta.embedded.block.<key>`
+//   triggers — comment markers accepted between `/*` and `*/`
+//   scope    — TextMate scope name of the target grammar (e.g. "source.python")
+//   langId   — VSCode language id used for the embeddedLanguages map
 
 const fs = require('fs');
 const path = require('path');
@@ -33,7 +30,7 @@ const BEGIN_CAPS = {
 const END_CAPS = {
     '1': { name: 'punctuation.definition.string.end.nix' },
 };
-const MULTI_END = "([ \\t]*'')(?![\\$'\\\\])";
+const MULTI_END = "^([ \\t]*'')(?![\\$'\\\\])";
 const DOUBLE_END = '(?<!\\\\)(")';
 
 function makeMulti(lang) {
@@ -44,7 +41,7 @@ function makeMulti(lang) {
         end: MULTI_END,
         endCaptures: END_CAPS,
         contentName: `meta.embedded.block.${lang.key}`,
-        patterns: [{ include: lang.useShellBody ? '#shell-body' : lang.scope }],
+        patterns: [{ include: lang.scope }],
     };
 }
 
@@ -63,14 +60,6 @@ function makeDouble(lang) {
 const repository = {};
 for (const lang of LANGUAGES) {
     repository[`${lang.key}-multi`] = makeMulti(lang);
-    if (lang.key === 'shell') {
-        // Insert shell-body adjacent to shell-multi for readability of the generated file.
-        repository['shell-body'] = {
-            begin: '\\G',
-            while: "^(?![ \\t]*'')",
-            patterns: [{ include: 'source.shell' }],
-        };
-    }
     repository[`${lang.key}-double`] = makeDouble(lang);
 }
 
