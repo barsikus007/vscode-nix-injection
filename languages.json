@@ -1,5 +1,6 @@
 [
-  { "key": "shell",      "triggers": ["bash", "zsh", "sh", "shell", "shellscript"], "scope": "source.shell",       "langId": "shellscript", "useShellBody": true },
+  { "key": "shell",      "triggers": ["bash", "zsh", "sh", "shell", "shellscript"], "scope": "source.shell",       "langId": "shellscript" },
+  { "key": "nftables",   "triggers": ["nftables", "nft"],                           "scope": "source.nft",         "langId": "nft" },
   { "key": "python",     "triggers": ["python", "py"],                              "scope": "source.python",      "langId": "python" },
   { "key": "javascript", "triggers": ["javascript", "js"],                          "scope": "source.js",          "langId": "javascript" },
   { "key": "typescript", "triggers": ["typescript", "ts"],                          "scope": "source.ts",          "langId": "typescript" },
