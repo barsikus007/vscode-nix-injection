@@ -6,22 +6,7 @@ Works alongside [jnoortheen.nix-ide](https://marketplace.visualstudio.com/items?
 
 ## Example
 
-```nix
-{
-  startScript = /* bash */ ''
-    echo "hello"
-    for f in *.txt; do
-      cat "$f"
-    done
-  '';
-
-  config = /* json */ ''
-    { "port": 8080, "debug": true }
-  '';
-
-  query = /* sql */ "SELECT * FROM users WHERE id = $1";
-}
-```
+![Highlighting Preview](https://raw.githubusercontent.com/barsikus007/vscode-nix-injection/master/docs/images/preview.png)
 
 The `/* lang */` marker goes immediately before the opening `''` or `"`. Highlighting applies to both multi-line (`''...''`) and single-line (`"..."`) Nix strings
 
@@ -39,10 +24,12 @@ For highlighting to work, the corresponding language must be known to VSCode —
 
 ## Development
 
-```sh
+```shell
 bun install
 bun run generate  # regenerate syntaxes/nix-inline-injection.tmLanguage.json from scripts/generate.js
 bun run test      # tokenize test.nix via vscode-textmate
+
+nix build .#vsix && code --install-extension ./result/nix-injection-*.vsix
 ```
 
 To add a new language — one entry in [languages.json](languages.json) (single source of truth for the generator and the nix flake), then `bun run generate`. Issues or PRs are welcomed!
