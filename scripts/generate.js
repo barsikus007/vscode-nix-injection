@@ -72,7 +72,7 @@ for (const lang of LANGUAGES) {
 const grammar = {
     $schema: 'https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json',
     scopeName: 'nix.inline-injection',
-    injectionSelector: 'L:source.nix',
+    injectionSelector: 'L:source.nix - comment - string',
     patterns,
     repository,
 };

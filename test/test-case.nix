@@ -6,4 +6,6 @@
   '';
   sqlQuery = /* sql */ "SELECT * FROM users WHERE id = $1";
   regularCommentedString /* nothing here */ = "nothing here too";
+  # commentedInjection = /* bash */ '' echo should-not-highlight '';
+  /* blockCommentedInjection = /* bash */ /* '' echo also-not '' */
 }
