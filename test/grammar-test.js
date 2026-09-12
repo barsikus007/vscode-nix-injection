@@ -3,7 +3,7 @@
 // Used to verify that embedded-language blocks do not leak past the closing ''.
 //
 // Usage:
-//   bun run test                  # runs against ../test.nix
+//   bun run test                  # runs against ../test-case.nix
 //   bun test/grammar-test.js FILE # tokenize a custom file
 //
 // Override grammar paths via env vars if auto-detection fails:
@@ -54,29 +54,48 @@ function findNixGrammar() {
     return null;
 }
 
-function findShellGrammar() {
-    if (process.env.SHELL_GRAMMAR) return process.env.SHELL_GRAMMAR;
-    const rel = 'resources/app/extensions/shellscript/syntaxes/shell-unix-bash.tmLanguage.json';
+function findVscodeExtensionsDir() {
     const candidates = [
-        `/Applications/Visual Studio Code.app/Contents/${rel}`,
-        `/usr/share/code/${rel}`,
-        `/usr/share/code-oss/${rel}`,
-        `/opt/visual-studio-code/${rel}`,
-        `/snap/code/current/usr/share/code/${rel}`,
+        '/Applications/Visual Studio Code.app/Contents/resources/app/extensions',
+        '/usr/share/code/resources/app/extensions',
+        '/usr/share/code-oss/resources/app/extensions',
+        '/opt/visual-studio-code/resources/app/extensions',
+        '/snap/code/current/usr/share/code/resources/app/extensions',
     ];
     // Search /nix/store for a vscode install (NixOS)
     try {
         for (const entry of fs.readdirSync('/nix/store')) {
             if (/-vscode-/.test(entry)) {
-                candidates.push(`/nix/store/${entry}/lib/vscode/${rel}`);
+                candidates.push(`/nix/store/${entry}/lib/vscode/resources/app/extensions`);
             }
         }
     } catch { /* not on NixOS */ }
     return firstExisting(candidates);
 }
 
+// map scopeName -> grammar file for every built-in VSCode grammar, so rules
+// for python/js/rust/... do not get silently dropped when the include resolves
+function collectBuiltinGrammars(extDir) {
+    const scopes = {};
+    if (!extDir) return scopes;
+    for (const ext of fs.readdirSync(extDir)) {
+        let pkg;
+        try {
+            pkg = JSON.parse(fs.readFileSync(path.join(extDir, ext, 'package.json'), 'utf8'));
+        } catch { continue; }
+        for (const g of (pkg.contributes && pkg.contributes.grammars) || []) {
+            if (g.scopeName && g.path && !scopes[g.scopeName]) {
+                scopes[g.scopeName] = path.join(extDir, ext, g.path);
+            }
+        }
+    }
+    return scopes;
+}
+
 const NIX = findNixGrammar();
-const SHELL = findShellGrammar();
+const BUILTIN = collectBuiltinGrammars(findVscodeExtensionsDir());
+if (process.env.SHELL_GRAMMAR) BUILTIN['source.shell'] = process.env.SHELL_GRAMMAR;
+const SHELL = BUILTIN['source.shell'];
 
 if (!NIX) {
     console.error('Could not locate nix.tmLanguage.json (set NIX_GRAMMAR env var).');
@@ -99,8 +118,8 @@ const registry = new vsctm.Registry({
     loadGrammar: scopeName => {
         let p = null;
         if (scopeName === 'source.nix') p = NIX;
-        else if (scopeName === 'source.shell') p = SHELL;
         else if (scopeName === 'nix.inline-injection') p = INJ;
+        else p = BUILTIN[scopeName] || null;
         if (!p) return null;
         return Promise.resolve(vsctm.parseRawGrammar(fs.readFileSync(p).toString(), p));
     },
@@ -112,6 +131,17 @@ const text = fs.readFileSync(inputFile, 'utf-8');
 const lines = text.split('\n');
 
 (async () => {
+    await onigLib;
+    // compile every injection regex up front: rules whose include does not
+    // resolve are dropped silently, which would hide a broken begin/end pattern
+    const rawInj = JSON.parse(fs.readFileSync(INJ, 'utf8'));
+    const regexes = Object.values(rawInj.repository).flatMap(r => [r.begin, r.end].filter(Boolean));
+    try {
+        new oniguruma.OnigScanner(regexes);
+    } catch (e) {
+        console.error(`Invalid regex in ${path.basename(INJ)}: ${String(e).split('\n')[0]}`);
+        process.exit(1);
+    }
     const grammar = await registry.loadGrammar('source.nix');
     let ruleStack = vsctm.INITIAL;
     let leaked = false;

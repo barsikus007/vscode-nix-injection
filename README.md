@@ -10,6 +10,16 @@ Works alongside [jnoortheen.nix-ide](https://marketplace.visualstudio.com/items?
 
 The `/* lang */` marker goes immediately before the opening `''` or `"`. Highlighting applies to both multi-line (`''...''`) and single-line (`"..."`) Nix strings
 
+## Automatic triggers
+
+Some strings highlight with no marker, mirroring the [nvim-treesitter queries](https://github.com/nvim-treesitter/nvim-treesitter/blob/main/runtime/queries/nix/injections.scm):
+
+- attributes `pre*`/`post*`/`*Phase`/`script` → shell
+- `writeShellScript*`/`writeBash*`/`writeDash*` → shell, `writeFish*` → fish, `writeHaskell*` → haskell, `writeJS*` → javascript, `writePerl*` → perl, `writePy*` → python, `writeRust*` → rust (the `"name"` argument must precede the string, an optional flat `{ }` argument may sit in between, as in `pkgs.writers`)
+- `builtins.match "pat" str` and any function whose name ends in `match` → regex for the first argument
+
+The trigger and the opening quote must stay on the same line. Strings inside attribute set arguments (`runCommand`, `writeShellApplication`, `nixosTest` `testScript`) still need the comment marker.
+
 ## Supported languages
 
 `bash`/`sh`/`shell`/`shellscript`, `python`/`py`, `javascript`/`js`, `typescript`/`ts`, `json`, `yaml`/`yml`, `toml`, `html`, `css`, `scss`/`sass`, `lua`, `ruby`/`rb`, `go`/`golang`, `rust`/`rs`, `cpp`/`c++`/`cxx`, `c`, `java`, `kotlin`/`kt`, `sql`/`postgresql`/`mysql`, `xml`, `markdown`/`md`, `dockerfile`, `nix`, `haskell`/`hs`, `php`, `perl`/`pl`, `powershell`/`ps1`/`pwsh`, `fish`, `zsh`, `regex`/`regexp`, `diff`/`patch`, `makefile`/`make`, `ini`/`conf`/`cfg`, `kdl`

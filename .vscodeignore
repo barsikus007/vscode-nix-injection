@@ -1,12 +1,14 @@
 .git/**
 .github/**
 .gitignore
+.gitattributes
 .claude/**
 .vscode/**
 node_modules/**
 test/**
 scripts/**
 docs/**
+result
 flake.nix
 flake.lock
 package-lock.json
