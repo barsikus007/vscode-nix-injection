@@ -17,8 +17,10 @@ Some strings highlight with no marker, mirroring the [nvim-treesitter queries](h
 - attributes `pre*`/`post*`/`*Phase`/`script` → shell
 - `writeShellScript*`/`writeBash*`/`writeDash*` → shell, `writeFish*` → fish, `writeHaskell*` → haskell, `writeJS*` → javascript, `writePerl*` → perl, `writePy*` → python, `writeRust*` → rust (the `"name"` argument must precede the string, an optional flat `{ }` argument may sit in between, as in `pkgs.writers`)
 - `builtins.match "pat" str` and any function whose name ends in `match` → regex for the first argument
+- `nixosTest`/`runTest` with a `testScript` attribute → python, `writeShellApplication` with a `text` attribute → shell
+- a `config` attribute placed after `type = "lua"` in the same attribute set → lua (home-manager Neovim plugins)
 
-The trigger and the opening quote must stay on the same line. Strings inside attribute set arguments (`runCommand`, `writeShellApplication`, `nixosTest` `testScript`) still need the comment marker.
+The one-line triggers above need the opening quote on the same line as the trigger. A string after the attribute set argument (`runCommand`) still needs the comment marker.
 
 ## Supported languages
 
@@ -39,7 +41,7 @@ bun install
 bun run generate  # regenerate syntaxes/nix-inline-injection.tmLanguage.json from scripts/generate.js
 bun run test      # tokenize test.nix via vscode-textmate
 
-nix build .#vsix && code --install-extension ./result/nix-injection-*.vsix
+code --install-extension $(nix build .#vsix --no-link --print-out-paths)/*.vsix
 ```
 
 To add a new language — one entry in [languages.json](languages.json) (single source of truth for the generator and the nix flake), then `bun run generate`. Issues or PRs are welcomed!

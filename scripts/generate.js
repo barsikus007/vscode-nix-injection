@@ -33,6 +33,15 @@ const END_CAPS = {
 const MULTI_END = "^([ \\t]*'')(?![\\$'\\\\])";
 const DOUBLE_END = '(?<!\\\\)(")';
 
+const makeMultiPatterns = (scope, key) => [
+  {
+    begin: "(^|\\G)",
+    while: "(^|\\G)(?![ \\t]*''(?!['$\\\\]))",
+    contentName: `meta.embedded.block.${key}`,
+    patterns: [{ include: scope }],
+  },
+];
+
 function makeMulti(lang) {
   const trig = triggerAlt(lang.triggers);
   return {
@@ -40,8 +49,7 @@ function makeMulti(lang) {
     beginCaptures: BEGIN_CAPS,
     end: MULTI_END,
     endCaptures: END_CAPS,
-    contentName: `meta.embedded.block.${lang.key}`,
-    patterns: [{ include: lang.scope }],
+    patterns: makeMultiPatterns(lang.scope, lang.key),
   };
 }
 
@@ -73,9 +81,9 @@ for (const lang of LANGUAGES) {
 // injection queries of nvim-treesitter:
 // https://github.com/nvim-treesitter/nvim-treesitter/blob/main/runtime/queries/nix/injections.scm
 // limits vs treesitter: trigger and string opener must stay on one line and
-// only a flat { } argument is allowed in between, so strings nested inside
-// attrset arguments (runCommand, writeShellApplication, nixosTest) stay
-// comment-triggered
+// only a flat { } argument is allowed in between; a string after the attrset
+// argument (runCommand) stays comment-triggered, strings nested inside the
+// attrset argument are handled by the region rules below
 const OPEN_CAPS = {
   1: { name: "punctuation.definition.string.begin.nix" },
 };
@@ -100,29 +108,34 @@ const FUNC_RULES = [
 // builtins.match and friends: the first argument is the regex
 const DIRECT_FUNC_RULES = [{ key: "regex", func: "[A-Za-z]*match" }];
 
-function addContextRules(repoKey, key, lookbehind) {
+function addContextRules(repoKey, key, lookbehind, includeDouble = true) {
   const scope = scopeByKey[key];
   repository[`${repoKey}-multi`] = {
     begin: `${lookbehind}('')`,
     beginCaptures: OPEN_CAPS,
     end: MULTI_END,
     endCaptures: END_CAPS,
-    contentName: `meta.embedded.block.${key}`,
-    patterns: [{ include: scope }],
-  };
-  repository[`${repoKey}-double`] = {
-    begin: `${lookbehind}(")`,
-    beginCaptures: OPEN_CAPS,
-    end: DOUBLE_END,
-    endCaptures: END_CAPS,
-    contentName: `meta.embedded.block.${key}`,
-    patterns: [{ include: scope }],
+    patterns: makeMultiPatterns(scope, key),
   };
   patterns.push({ include: `#${repoKey}-multi` });
-  patterns.push({ include: `#${repoKey}-double` });
+
+  if (includeDouble) {
+    repository[`${repoKey}-double`] = {
+      begin: `${lookbehind}(")`,
+      beginCaptures: OPEN_CAPS,
+      end: DOUBLE_END,
+      endCaptures: END_CAPS,
+      contentName: `meta.embedded.block.${key}`,
+      patterns: [{ include: scope }],
+    };
+    patterns.push({ include: `#${repoKey}-double` });
+  }
 }
 
-addContextRules("shell-attr", "shell", `(?<=\\b${ATTR_SHELL}\\s*=\\s*)`);
+// shell attributes only auto-inject into multiline strings (''...''); single-line
+// double-quoted strings ("...") easily swallow the closing quote because bash
+// statement boundaries do not end on double quotes within a single line
+addContextRules("shell-attr", "shell", `(?<=\\b${ATTR_SHELL}\\s*=\\s*)`, false);
 for (const { key, func } of FUNC_RULES) {
   addContextRules(
     `${key}-func`,
@@ -133,6 +146,104 @@ for (const { key, func } of FUNC_RULES) {
 for (const { key, func } of DIRECT_FUNC_RULES) {
   addContextRules(`${key}-func-direct`, key, `(?<=\\b${func}\\s+)`);
 }
+
+// region-based triggers for strings nested inside an attrset argument, also
+// from the treesitter queries: runTest/nixosTest testScript,
+// writeShellApplication text, home-manager type="lua" + config
+// the regions own the outer braces (hm-lua closes zero-width before the base
+// grammar's brace) and re-include source.nix inside, so nested attrsets stay
+// balanced and the rest of the block keeps normal highlighting; the inner
+// attr rules consume the attr name to win the tie against the bind rule of
+// the included grammar and only fire while the region is open
+const ATTR_NAME_SCOPE = "entity.other.attribute-name.multipart.nix";
+const BIND_OP_SCOPE = "keyword.operator.bind.nix";
+const STR_BEGIN_SCOPE = "punctuation.definition.string.begin.nix";
+const NOT_IDENT_CHAR = "(?<![A-Za-z0-9_'.-])";
+
+function addRegionAttrRules(repoKey, key, attr) {
+  const scope = scopeByKey[key];
+  repository[`${repoKey}-multi`] = {
+    begin: `${NOT_IDENT_CHAR}(${attr})(\\s*)(=)(\\s*)('')`,
+    beginCaptures: {
+      1: { name: ATTR_NAME_SCOPE },
+      3: { name: BIND_OP_SCOPE },
+      5: { name: STR_BEGIN_SCOPE },
+    },
+    end: MULTI_END,
+    endCaptures: END_CAPS,
+    patterns: makeMultiPatterns(scope, key),
+  };
+  repository[`${repoKey}-double`] = {
+    begin: `${NOT_IDENT_CHAR}(${attr})(\\s*)(=)(\\s*)(")`,
+    beginCaptures: {
+      1: { name: ATTR_NAME_SCOPE },
+      3: { name: BIND_OP_SCOPE },
+      5: { name: STR_BEGIN_SCOPE },
+    },
+    end: DOUBLE_END,
+    endCaptures: END_CAPS,
+    contentName: `meta.embedded.block.${key}`,
+    patterns: [{ include: scope }],
+  };
+  return [{ include: `#${repoKey}-multi` }, { include: `#${repoKey}-double` }];
+}
+
+const FUNC_REGION_CAPS = {
+  1: { name: "variable.parameter.name.nix" },
+  3: { name: "punctuation.definition.attrset.nix" },
+};
+const BRACE_CAP = { 1: { name: "punctuation.definition.attrset.nix" } };
+
+// the included grammar scopes bindings properly only inside its own attrset
+// context, which the region replaces, so the region replicates the binding
+// shell (name, =, ;) itself and delegates values to the included grammar
+const TERMINATOR_MIMIC = { match: "(;)", name: "punctuation.terminator.bind.nix" };
+const BIND_MIMIC = {
+  begin: `${NOT_IDENT_CHAR}([\\w.'-]+)(\\s*)(=)`,
+  beginCaptures: {
+    1: { name: ATTR_NAME_SCOPE },
+    3: { name: BIND_OP_SCOPE },
+  },
+  end: "(;)",
+  endCaptures: { 1: { name: "punctuation.terminator.bind.nix" } },
+  patterns: [{ include: "source.nix" }],
+};
+const regionPatterns = (innerRules) => [
+  ...innerRules,
+  TERMINATOR_MIMIC,
+  BIND_MIMIC,
+  { include: "source.nix" },
+];
+
+function addFuncRegion(repoKey, func, innerRules) {
+  repository[repoKey] = {
+    begin: `\\b(${func})(\\s*)(\\{)`,
+    beginCaptures: FUNC_REGION_CAPS,
+    end: "(\\})",
+    endCaptures: BRACE_CAP,
+    patterns: regionPatterns(innerRules),
+  };
+  patterns.push({ include: `#${repoKey}` });
+}
+
+addFuncRegion("nixostest-region", "nixosTest|runTest", addRegionAttrRules("testscript", "python", "testScript"));
+addFuncRegion("wshapp-region", "writeShellApplication", addRegionAttrRules("wsh-text", "shell", "text"));
+
+// home-manager neovim plugin spec: opens on type = "lua" inside a base-owned
+// attrset and closes zero-width before its }, which stays with the base
+// grammar; a config placed before the type stays plain, same as in the
+// treesitter query
+repository["hm-lua-region"] = {
+  begin: `${NOT_IDENT_CHAR}(type)(\\s*)(=)(\\s*)("lua")`,
+  beginCaptures: {
+    1: { name: ATTR_NAME_SCOPE },
+    3: { name: BIND_OP_SCOPE },
+    5: { name: "string.quoted.double.nix" },
+  },
+  end: "(?=\\})",
+  patterns: regionPatterns(addRegionAttrRules("hm-config", "lua", "config")),
+};
+patterns.push({ include: "#hm-lua-region" });
 
 const grammar = {
   $schema: "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",

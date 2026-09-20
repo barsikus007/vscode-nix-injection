@@ -1,7 +1,10 @@
 {
   pkgs ? null,
-  writeShellScriptBin ? null,
   runCommand ? null,
+  runTest ? null,
+  testers ? null,
+  writeShellApplication ? null,
+  writeShellScriptBin ? null,
 }:
 {
   shellCodeFine = /* bash */ ''
@@ -9,10 +12,17 @@
     exit_zsh() { exit; }
     echo "fine"
   '';
+  shellTrailingAmpersand = /* shell */ ''
+    (
+      echo "subshell"
+    ) 9>&- &
+  '';
   sqlQuery = /* sql */ "SELECT * FROM users WHERE id = $1";
-  regularCommentedString /* nothing here */ = "nothing here too";
+  regularCommentedString # nothing here
+    = "nothing here too";
   # commentedInjection = /* bash */ '' echo should-not-highlight '';
-  /* blockCommentedInjection = /* bash */ /* '' echo also-not '' */
+  # blockCommentedInjection = /* bash
+  # '' echo also-not ''
   preFixup = ''
     echo attr-lookbehind
   '';
@@ -35,5 +45,46 @@
   re = builtins.match "a(.*)b" "acb";
   runCmd = runCommand "demo" { } ''
     echo func-negative
+  '';
+  wshApp = writeShellApplication {
+    name = "demo";
+    runtimeInputs = [ pkgs.curl ];
+    text = ''
+      echo wsh-text
+    '';
+  };
+  test = testers.nixosTest {
+    name = "demo";
+    nodes.machine =
+      { pkgs, ... }:
+      {
+        environment.systemPackages = [ pkgs.hello ];
+      };
+    testScript = ''
+      machine.wait_for_unit("multi-user.target")
+    '';
+  };
+  test2 = runTest {
+    testScript = "print(1)";
+  };
+  plugins = [
+    {
+      plugin = null;
+      type = "lua";
+      config = ''
+        require("demo").setup()
+      '';
+    }
+    {
+      config = "plain config";
+      type = "viml";
+    }
+    {
+      config = "plain order";
+      type = "lua";
+    }
+  ];
+  after = ''
+    plain after regions
   '';
 }
