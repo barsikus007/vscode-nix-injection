@@ -2,7 +2,7 @@
   description = "VSCode extension: Nix Comment-based Language Injection";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "nixpkgs/nixos-25.11";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
