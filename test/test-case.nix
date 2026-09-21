@@ -34,6 +34,15 @@
   preFixup = ''
     echo attr-lookbehind
   '';
+  postPatchConcat = (pkgs.previousAttrs.postPatch or "") + ''
+    echo attr-concat
+  '';
+  envExtra = ''
+    echo attr-extra
+  '';
+  extraInstallCommands = ''
+    echo attr-commands
+  '';
   postInstall = "echo attr-double";
   phases = ''
     echo attr-negative
@@ -52,7 +61,7 @@
   '';
   re = builtins.match "a(.*)b" "acb";
   runCmd = runCommand "demo" { } ''
-    echo func-negative
+    echo func-run-command
   '';
   wshApp = writeShellApplication {
     name = "demo";

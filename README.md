@@ -12,7 +12,11 @@ The `/* lang */` marker goes immediately before the opening `''` or `"`. Highlig
 
 ## Automatic triggers
 
-Some strings highlight with no marker, mirroring the [nvim-treesitter queries](https://github.com/nvim-treesitter/nvim-treesitter/blob/main/runtime/queries/nix/injections.scm):
+Some strings highlight with no marker:
+
+### From nvim-treesitter queries
+
+Mirrors the [nvim-treesitter injection queries](https://github.com/nvim-treesitter/nvim-treesitter/blob/main/runtime/queries/nix/injections.scm):
 
 - attributes `pre*`/`post*`/`*Phase`/`script` → shell
 - `writeShellScript*`/`writeBash*`/`writeDash*` → shell, `writeFish*` → fish, `writeHaskell*` → haskell, `writeJS*` → javascript, `writePerl*` → perl, `writePy*` → python, `writeRust*` → rust (the `"name"` argument must precede the string, an optional flat `{ }` argument may sit in between, as in `pkgs.writers`)
@@ -20,7 +24,13 @@ Some strings highlight with no marker, mirroring the [nvim-treesitter queries](h
 - `nixosTest`/`runTest` with a `testScript` attribute → python, `writeShellApplication` with a `text` attribute → shell
 - a `config` attribute placed after `type = "lua"` in the same attribute set → lua (home-manager Neovim plugins)
 
-The one-line triggers above need the opening quote on the same line as the trigger. A string after the attribute set argument (`runCommand`) still needs the comment marker.
+### Custom extensions
+
+- shell configs and hooks: `*Extra` (`initExtra`, `envExtra`, `profileExtra`), `*ShellInit` (`interactiveShellInit`, `loginShellInit`), `*Commands?` (`buildCommand`, `resumeCommands`, `extraInstallCommands`), `*Hook` (Disko), `*Scripts?` (darkman) → shell (multiline only)
+- `overrideAttrs` concatenations: `(previousAttrs.postPatch or "") + ''` → shell
+- `runCommand*` → shell (`runCommand`, `runCommandLocal`, `runCommandCC` with `"name"` and optional flat `{ }`)
+
+The one-line triggers above need the opening quote on the same line as the trigger. Strings after a multi-line attribute set still need the comment marker.
 
 ## Supported languages
 

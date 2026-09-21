@@ -90,14 +90,30 @@ const OPEN_CAPS = {
 const scopeByKey = Object.fromEntries(LANGUAGES.map((l) => [l.key, l.scope]));
 
 const IDENT_TAIL = "[A-Za-z0-9_'-]*";
-// nixpkgs phase attrs from the treesitter query: ^%a+Phase$, ^pre%a+$, ^post%a+$, ^script$
-const ATTR_SHELL = "(?:(?:pre|post)[A-Za-z]+|[A-Za-z]+Phase|script)";
+// nixpkgs phase attrs from nvim-treesitter queries: ^%a+Phase$, ^pre%a+$, ^post%a+$, ^script$
+// https://github.com/nvim-treesitter/nvim-treesitter/blob/main/runtime/queries/nix/injections.scm
+const ATTR_SHELL_TREESITTER = "(?:(?:pre|post)[A-Za-z]+|[A-Za-z]+Phase|script)";
+
+// custom extension attrs: NixOS, Home Manager, Disko shell configs, hooks, commands
+const ATTR_SHELL_EXTRA = [
+  // shell configs: initExtra, envExtra, profileExtra, interactiveShellInit, loginShellInit
+  "(?:init|env|profile)Extra[A-Za-z]*",
+  "(?:interactive|login)?ShellInit",
+  // hooks and commands: buildCommand, resumeCommands, extraInstallCommands, postCreateHook
+  "[A-Za-z]+(?:Command|Commands|Hook|Script|Scripts)",
+].join("|");
+
+const ATTR_SHELL = `(?:${ATTR_SHELL_TREESITTER}|${ATTR_SHELL_EXTRA})`;
 const NAME_STR = '"(?:[^"\\\\]|\\\\.)*"';
 
-// writeFoo "name" [flatAttrset] <string> — the pkgs.writers family takes a
-// mandatory attrset after the name, trivial-builders writers take none
+// functions taking "name" [flatAttrset] <string>:
+// - from nvim-treesitter queries: writeShellScript*, writeBash*, writeDash*, writeFish*, etc.
+// - custom extension: runCommand, runCommandLocal, runCommandCC
 const FUNC_RULES = [
-  { key: "shell", func: "write(?:ShellScript|Bash|Dash)" },
+  {
+    key: "shell",
+    func: "(?:write(?:ShellScript|Bash|Dash)|runCommand(?:Local|CC)?)",
+  },
   { key: "fish", func: "writeFish" },
   { key: "haskell", func: "writeHaskell" },
   { key: "javascript", func: "writeJS" },
@@ -134,8 +150,15 @@ function addContextRules(repoKey, key, lookbehind, includeDouble = true) {
 
 // shell attributes only auto-inject into multiline strings (''...''); single-line
 // double-quoted strings ("...") easily swallow the closing quote because bash
-// statement boundaries do not end on double quotes within a single line
-addContextRules("shell-attr", "shell", `(?<=\\b${ATTR_SHELL}\\s*=\\s*)`, false);
+// statement boundaries do not end on double quotes within a single line.
+// lookbehind also supports overrideAttrs concatenations:
+// postPatch = (previousAttrs.postPatch or "") + ''
+addContextRules(
+  "shell-attr",
+  "shell",
+  `(?<=\\b${ATTR_SHELL}\\s*=\\s*(?:\\([^)]*\\)\\s*\\+\\s*)?)`,
+  false,
+);
 for (const { key, func } of FUNC_RULES) {
   addContextRules(
     `${key}-func`,
