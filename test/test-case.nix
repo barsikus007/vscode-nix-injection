@@ -1,4 +1,5 @@
 {
+  lib ? null,
   pkgs ? null,
   runCommand ? null,
   runTest ? null,
@@ -16,6 +17,13 @@
     (
       echo "subshell"
     ) 9>&- &
+  '';
+  shellInterpolatedString = /* shell */ ''
+    echo "start"
+    ${lib.optionalString true ''
+      echo "inside"
+    ''}
+    echo "end"
   '';
   sqlQuery = /* sql */ "SELECT * FROM users WHERE id = $1";
   regularCommentedString # nothing here

@@ -30,13 +30,13 @@ const BEGIN_CAPS = {
 const END_CAPS = {
   1: { name: "punctuation.definition.string.end.nix" },
 };
-const MULTI_END = "^([ \\t]*'')(?![\\$'\\\\])";
+const MULTI_END = "^([ \\t]*'')(?![\\$'\\\\}])";
 const DOUBLE_END = '(?<!\\\\)(")';
 
 const makeMultiPatterns = (scope, key) => [
   {
     begin: "(^|\\G)",
-    while: "(^|\\G)(?![ \\t]*''(?!['$\\\\]))",
+    while: "(^|\\G)(?![ \\t]*''(?!['$\\\\}]))",
     contentName: `meta.embedded.block.${key}`,
     patterns: [{ include: scope }],
   },
